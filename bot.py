@@ -5,7 +5,7 @@ from openai import AsyncOpenAI # ChatGPT uchun
 
 # Kalitlarni joylang
 API_TOKEN = '8346170407:AAGQyIvFu5I3ZTx0ZQ9rIlF7bc6nhBF7mus'
-OPENAI_API_KEY = 'BU_YERGA_OPENAI_KALITINI_QOYING'
+OPENAI_API_KEY = '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'
 
 client = AsyncOpenAI(api_key=OPENAI_API_KEY)
 logging.basicConfig(level=logging.INFO)
@@ -31,3 +31,4 @@ async def main():
 
 if __name__ == '__main__':
     asyncio.run(main())
+
