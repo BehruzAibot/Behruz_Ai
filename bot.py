@@ -1,35 +1,37 @@
 import asyncio
 import logging
+import os
 from aiogram import Bot, Dispatcher, types
-from openai import AsyncOpenAI # ChatGPT uchun
+from aiogram.filters import Command
+import google.generativeai as genai
 
-# Kalitlarni joylang
+# Sozlamalar
 API_TOKEN = '8346170407:AAGQyIvFu5I3ZTx0ZQ9rIlF7bc6nhBF7mus'
-OPENAI_API_KEY = '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'
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-client = AsyncOpenAI(api_key=OPENAI_API_KEY)
+# Gemini-ni sozlash
+genai.configure(api_key=GEMINI_API_KEY)
+model = genai.GenerativeModel('gemini-pro')
+
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher()
 
+@dp.message(Command("start"))
+async def start_handler(message: types.Message):
+    await message.answer("Salom! Men Google Gemini yordamida ishlovchi aqlli botman. Savolingizni bering!")
+
 @dp.message()
-async def chat_with_gpt(message: types.Message):
-    # Bot "o'ylayotganini" bildirish uchun
-    await bot.send_chat_action(message.chat.id, "typing")
-    
-    # ChatGPT-ga so'rov yuborish
-    response = await client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": message.text}]
-    )
-    
-    # Javobni foydalanuvchiga qaytarish
-    await message.answer(response.choices[0].message.content)
+async def chat_handler(message: types.Message):
+    try:
+        response = model.generate_content(message.text)
+        await message.answer(response.text)
+    except Exception as e:
+        await message.answer("Xatolik yuz berdi. API kalitni tekshiring.")
+        print(f"Xato: {e}")
 
 async def main():
     await dp.start_polling(bot)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     asyncio.run(main())
-
-
