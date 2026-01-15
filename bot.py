@@ -1,38 +1,30 @@
 import asyncio
 import logging
 from aiogram import Bot, Dispatcher, types
-from aiogram.filters import Command
+from openai import AsyncOpenAI # ChatGPT uchun
 
-# Telegram bot tokiningiz
+# Kalitlarni joylang
 API_TOKEN = '8346170407:AAGQyIvFu5I3ZTx0ZQ9rIlF7bc6nhBF7mus'
+OPENAI_API_KEY = 'BU_YERGA_OPENAI_KALITINI_QOYING'
 
+client = AsyncOpenAI(api_key=OPENAI_API_KEY)
 logging.basicConfig(level=logging.INFO)
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher()
 
-@dp.message(Command("start"))
-async def send_welcome(message: types.Message):
-    await message.reply("Salom! Men Behruz_Ai sun'iy intellekt botiman. Menga istagan savolingizni bering!")
-
 @dp.message()
-async def ai_chat(message: types.Message):
-    # Bu yerda bot foydalanuvchi xabarini oladi
-    user_text = message.text.lower()
+async def chat_with_gpt(message: types.Message):
+    # Bot "o'ylayotganini" bildirish uchun
+    await bot.send_chat_action(message.chat.id, "typing")
     
-    await message.answer("O'ylayapman... 🤔") # Bot o'ylayotganini ko'rsatadi
-
-    # Oddiy mantiqiy AI (Hozircha shunday, keyin API ulaymiz)
-    if "salom" in user_text:
-        reply = "Assalomu alaykum! Sizga qanday yordam bera olaman?"
-    elif "isming nima" in user_text:
-        reply = "Mening ismim Behruz_Ai. Men Python tilida yaratilganman."
-    elif "nima qila olasan" in user_text:
-        reply = "Men savollarga javob berishim, menyular ko'rsatishim va siz bilan suhbatlashishim mumkin."
-    else:
-        # Haqiqiy AI xizmatini ulashdan oldin bot xabarni qayta ishlaydi
-        reply = f"Siz '{message.text}' dedingiz. Hozircha men o'rganish jarayonidaman, tez orada ChatGPT kabi aqlli bo'laman!"
-
-    await message.answer(reply)
+    # ChatGPT-ga so'rov yuborish
+    response = await client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": message.text}]
+    )
+    
+    # Javobni foydalanuvchiga qaytarish
+    await message.answer(response.choices[0].message.content)
 
 async def main():
     await dp.start_polling(bot)
