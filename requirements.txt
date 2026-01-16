@@ -1,3 +1,2 @@
 aiogram
-google-generativeai
-requests
+yt-dip
