@@ -1,58 +1,57 @@
 import asyncio
 import os
-import requests
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
-import google.generativeai as genai
+import yt_dlp
 
-# Kalitlar
+# Faqat Telegram Bot Token kerak
 API_TOKEN = '8346170407:AAGQyIvFu5I3ZTx0ZQ9rIlF7bc6nhBF7mus'
-GEMINI_KEY = os.getenv("GEMINI_API_KEY") # Render'dan oladi
-RAPID_KEY = "53238bd7dfmshf6287d7ef95f084p189ffajsn13728687bd87" # Sizning rasmingizdagi kalit
-
-# Gemini sozlamasi
-if GEMINI_KEY:
-    genai.configure(api_key=GEMINI_KEY)
-    gemini = genai.GenerativeModel('gemini-pro')
 
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher()
 
+# Video yuklash funksiyasi (API-siz)
+def download_video_direct(url):
+    ydl_opts = {
+        'format': 'bestvideo+bestaudio/best',
+        'outtmpl': 'video.mp4',
+        'quiet': True,
+        'no_warnings': True,
+    }
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(url, download=True)
+        return 'video.mp4'
+
 @dp.message(Command("start"))
 async def start(message: types.Message):
-    await message.answer("Salom! Video linkini yuboring yoki savol bering.")
+    await message.answer("Salom! Menga TikTok, Instagram yoki YouTube linkini yuboring, men uni API-larsiz yuklab berishga harakat qilaman!")
 
 @dp.message(F.text.contains("instagram.com") | F.text.contains("tiktok.com") | F.text.contains("youtube.com") | F.text.contains("youtu.be"))
-async def download_video(message: types.Message):
+async def handle_docs(message: types.Message):
     url = message.text
-    wait_msg = await message.answer("⏳ Video tayyorlanmoqda...")
+    wait_msg = await message.answer("⏳ Video yuklanmoqda (bu biroz vaqt olishi mumkin)...")
     
-    api_url = "https://social-download-all-in-one.p.rapidapi.com/v1/social/autolink"
-    headers = {
-        "x-rapidapi-key": RAPID_KEY,
-        "x-rapidapi-host": "social-download-all-in-one.p.rapidapi.com",
-        "Content-Type": "application/json"
-    }
-
     try:
-        response = requests.post(api_url, json={"url": url}, headers=headers).json()
-        video_link = response.get('url')
+        # Videoni serverga yuklab olish
+        loop = asyncio.get_event_loop()
+        video_file = await loop.run_in_executor(None, download_video_direct, url)
         
-        if video_link:
-            await message.answer_video(video=video_link, caption="✅ Marhamat!")
-            await wait_msg.delete()
-        else:
-            await message.answer("❌ Videoni yuklab bo'lmadi.")
-    except Exception:
-        await message.answer("⚠️ API bilan bog'lanib bo'lmadi.")
+        # Videoni foydalanuvchiga yuborish
+        video = types.FSInputFile(video_file)
+        await message.answer_video(video=video, caption="✅ Marhamat!")
+        await wait_msg.delete()
+        
+        # Faylni o'chirish (joyni tejash uchun)
+        if os.path.exists(video_file):
+            os.remove(video_file)
+            
+    except Exception as e:
+        await message.answer(f"❌ Xatolik yuz berdi. Bu linkdan video ololmadim.")
+        print(f"Xato: {e}")
 
 @dp.message()
-async def chat_with_ai(message: types.Message):
-    try:
-        res = gemini.generate_content(message.text)
-        await message.answer(res.text)
-    except Exception:
-        await message.answer("Hozircha sun'iy intellekt ishlamayapti (Kalitni tekshiring).")
+async def echo(message: types.Message):
+    await message.answer("Menga video linkini yuboring. Hozircha suhbatlashish funksiyasi o'chirilgan (chunki Gemini API ishlatilmayapti).")
 
 async def main():
     await dp.start_polling(bot)
